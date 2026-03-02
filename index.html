@@ -26,7 +26,7 @@
       action에 Apps Script 웹앱 URL(/exec)을 넣으세요.
       예: https://script.google.com/macros/s/AKfycb.../exec
     -->
-    <form id="f" method="POST" action="WEBAPP_URL_HERE">
+    <form id="f" method="POST" action="https://script.google.com/macros/s/AKfycbz0q-8tyD0lFzvoTniiMk76abS1F8GaLxFFqScGgF7EssJKVDrHn2Q8_xFhxNIfRjjT/exec">
       <div class="row">
         <div>
           <label>학번</label>
@@ -39,8 +39,8 @@
       </div>
 
       <label>학교 도메인 메일</label>
-      <input name="studentEmail" type="email" required placeholder="예: student@school.edu" />
-      <div class="warn">※ 도메인 메일만 입력하도록 안내하세요. (서버에서 도메인 검증도 가능)</div>
+      <input name="studentEmail" type="email" required placeholder="예: 2510101@sjeduhs.kr" />
+      <div class="warn">※ 학교 계정 지메일로만 입력하세요.</div>
 
       <label>유형</label>
       <select name="type" required>
@@ -64,7 +64,7 @@
       </div>
 
       <!-- 제출 성공 후 돌아갈 GitHub 성공 페이지 -->
-      <input type="hidden" name="returnUrl" value="SUCCESS_PAGE_URL_HERE" />
+      <input type="hidden" name="returnUrl" value="https://gibum-200.github.io/sjghs14_in_and_out/success.html" />
 
       <button class="btn" type="submit">제출</button>
       <div class="hint">
