@@ -10,23 +10,18 @@
     .row { display:flex; gap:12px; flex-wrap: wrap; }
     .row > div { flex:1; min-width: 220px; }
     label { display:block; margin-top: 12px; font-weight: 650; }
-    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 12px; font-size: 16px; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
     .btn { margin-top: 16px; padding: 12px 14px; border: 0; border-radius: 12px; background:#111; color:#fff; cursor:pointer; font-size: 16px; }
+    .btn:disabled { opacity: 0.6; cursor: default; }
     .hint { color:#555; font-size: 13px; margin-top: 8px; }
     .warn { color:#b00; font-size: 13px; margin-top: 8px; }
-    code { background:#f2f2f2; padding:2px 6px; border-radius:8px; }
   </style>
 </head>
 <body>
   <h2>외출·외박 확인증 제출</h2>
 
   <div class="card">
-    <!--
-      중요:
-      action에 Apps Script 웹앱 URL(/exec)을 넣으세요.
-      예: https://script.google.com/macros/s/AKfycb.../exec
-    -->
-    <form id="f" method="POST" action="https://script.google.com/macros/s/AKfycbw7fLuiqBa2lNtfdyl-hFsuQjYZn6fdhp4uuoLNwYcD54niS1RqZq71WNGrH6gI8QnW/exec">
+    <form id="requestForm" method="POST" action="https://script.google.com/macros/s/AKfycbw7fLuiqBa2lNtfdyl-hFsuQjYZn6fdhp4uuoLNwYcD54niS1RqZq71WNGrH6gI8QnW/exec">
       <div class="row">
         <div>
           <label>학번</label>
@@ -39,8 +34,14 @@
       </div>
 
       <label>학교 도메인 메일</label>
-      <input name="studentEmail" type="email" required placeholder="예:2610121@sjgl.sjeduhs.kr" />
-      <div class="warn">※ 학교 계정 지메일로만 입력하세요.</div>
+      <input
+        name="studentEmail"
+        type="email"
+        required
+        pattern="26[0-9]{5}@sjgl\.sjeduhs\.kr"
+        placeholder="예: 2610121@sjgl.sjeduhs.kr"
+      />
+      <div class="warn">※ 26숫자5자리@sjgl.sjeduhs.kr 형식만 입력 가능</div>
 
       <label>유형</label>
       <select name="type" required>
@@ -63,29 +64,37 @@
         </div>
       </div>
 
-      <!-- 제출 성공 후 돌아갈 GitHub 성공 페이지 -->
-      <input type="hidden" name="returnUrl" value="https://gibum-200.github.io/sjghs14_in_and_out/success.html" />
-
-      <button class="btn" type="submit">제출</button>
-      <div class="hint">
-        제출 후 담임 선생님 메일로 승인 링크가 발송됩니다.
-      </div>
+      <button id="submitBtn" class="btn" type="submit">제출</button>
+      <div class="hint">제출 후 완료 안내문이 바로 표시됩니다.</div>
     </form>
-
-    <div class="hint" style="margin-top:14px;">
-    </div>
   </div>
 
   <script>
-    // 클라이언트 UX 검증(서버 검증이 최종)
-    document.getElementById('f').addEventListener('submit', (ev) => {
-      const fd = new FormData(ev.target);
+    const form = document.getElementById('requestForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', (ev) => {
+      const fd = new FormData(form);
+
+      const email = String(fd.get('studentEmail') || '').trim();
+      const emailRe = /^26\d{5}@sjgl\.sjeduhs\.kr$/i;
+      if (!emailRe.test(email)) {
+        ev.preventDefault();
+        alert('학교 도메인 이메일 형식만 입력 가능합니다. 예: 2612345@sjgl.sjeduhs.kr');
+        return;
+      }
+
       const depart = new Date(fd.get('departAt'));
       const ret = new Date(fd.get('returnAt'));
+
       if (ret < depart) {
         ev.preventDefault();
         alert('복귀 시간이 출발 시간보다 빠를 수 없습니다.');
+        return;
       }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = '제출 중...';
     });
   </script>
 </body>
