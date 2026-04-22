@@ -9,11 +9,14 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       margin: 24px;
       max-width: 820px;
+      background: #fafafa;
+      color: #111;
     }
     .card {
       border: 1px solid #ddd;
       border-radius: 14px;
       padding: 18px;
+      background: #fff;
     }
     .row {
       display: flex;
@@ -36,6 +39,12 @@
       border-radius: 12px;
       font-size: 16px;
       box-sizing: border-box;
+      background: #fff;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
     .btn {
       margin-top: 16px;
@@ -55,11 +64,38 @@
       color: #555;
       font-size: 13px;
       margin-top: 8px;
+      line-height: 1.5;
     }
     .warn {
       color: #b00;
       font-size: 13px;
       margin-top: 8px;
+      line-height: 1.5;
+    }
+    .msg-box {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+    .msg-box.error {
+      display: block;
+      background: #fff5f5;
+      border: 1px solid #f0c2c2;
+      color: #8a1c1c;
+    }
+    .msg-box.info {
+      display: block;
+      background: #f5f9ff;
+      border: 1px solid #cfe0ff;
+      color: #174ea6;
+    }
+    .msg-title {
+      font-weight: 700;
+      margin-bottom: 6px;
     }
   </style>
 </head>
@@ -67,20 +103,21 @@
   <h2>외출·외박 확인증 제출</h2>
 
   <div class="card">
-    <form id="requestForm" method="POST" action="https://script.google.com/macros/s/AKfycbx_5ayq1knkwLLhQh1t5KHvwFycRjleKvNWozZyk0BYPr0PdL4liMfb6Ff7UQcjryMA/exec">
+    <form id="requestForm" novalidate>
       <div class="row">
         <div>
-          <label>학번</label>
-          <input name="studentId" required placeholder="예: 1601" />
+          <label for="studentId">학번</label>
+          <input id="studentId" name="studentId" required placeholder="예: 1601" />
         </div>
         <div>
-          <label>이름</label>
-          <input name="studentName" required placeholder="예: 김세국" />
+          <label for="studentName">이름</label>
+          <input id="studentName" name="studentName" required placeholder="예: 김세국" />
         </div>
       </div>
 
-      <label>학교 도메인 메일</label>
+      <label for="studentEmail">학교 도메인 메일</label>
       <input
+        id="studentEmail"
         name="studentEmail"
         type="email"
         required
@@ -89,58 +126,189 @@
       />
       <div class="warn">※ 26숫자5자리@sjgl.sjeduhs.kr 형식만 입력 가능</div>
 
-      <label>유형</label>
-      <select name="type" required>
+      <label for="type">유형</label>
+      <select id="type" name="type" required>
         <option value="" selected disabled>선택</option>
         <option value="외출">외출</option>
         <option value="외박">외박</option>
       </select>
 
-      <label>사유</label>
-      <textarea name="reason" rows="3" required placeholder="외출/외박 사유를 구체적으로 작성"></textarea>
+      <label for="reason">사유</label>
+      <textarea id="reason" name="reason" rows="3" required placeholder="외출/외박 사유를 구체적으로 작성"></textarea>
 
       <div class="row">
         <div>
-          <label>출발 시간</label>
-          <input name="departAt" type="datetime-local" required />
+          <label for="departAt">출발 시간</label>
+          <input id="departAt" name="departAt" type="datetime-local" required />
         </div>
         <div>
-          <label>복귀 시간</label>
-          <input name="returnAt" type="datetime-local" required />
+          <label for="returnAt">복귀 시간</label>
+          <input id="returnAt" name="returnAt" type="datetime-local" required />
         </div>
       </div>
 
       <button id="submitBtn" class="btn" type="submit">제출</button>
-      <div class="hint">제출 후 완료 안내문이 바로 표시됩니다.</div>
+      <div class="hint">
+        제출 후 완료 안내문이 바로 표시됩니다.<br>
+        이미 제출되었거나 승인된 신청과 시간이 겹치면 제출되지 않습니다.
+      </div>
+
+      <div id="messageBox" class="msg-box"></div>
     </form>
   </div>
 
   <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_5ayq1knkwLLhQh1t5KHvwFycRjleKvNWozZyk0BYPr0PdL4liMfb6Ff7UQcjryMA/exec';
+
     const form = document.getElementById('requestForm');
     const submitBtn = document.getElementById('submitBtn');
+    const messageBox = document.getElementById('messageBox');
 
-    form.addEventListener('submit', (ev) => {
-      const fd = new FormData(form);
+    function showMessage(type, title, text) {
+      messageBox.className = `msg-box ${type}`;
+      messageBox.innerHTML = `<div class="msg-title">${title}</div><div>${escapeHtml(text)}</div>`;
+    }
 
-      const email = String(fd.get('studentEmail') || '').trim();
-      const emailRe = /^26\d{5}@sjgl\.sjeduhs\.kr$/i;
-      if (!emailRe.test(email)) {
-        ev.preventDefault();
-        alert('학교 도메인 이메일 형식만 입력 가능합니다. 예: 2612345@sjgl.sjeduhs.kr');
-        return;
+    function clearMessage() {
+      messageBox.className = 'msg-box';
+      messageBox.innerHTML = '';
+      messageBox.style.display = '';
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function normalizeText(value) {
+      return String(value || '').trim();
+    }
+
+    function validateForm() {
+      const studentId = normalizeText(form.studentId.value);
+      const studentName = normalizeText(form.studentName.value);
+      const studentEmail = normalizeText(form.studentEmail.value);
+      const type = normalizeText(form.type.value);
+      const reason = normalizeText(form.reason.value);
+      const departAt = form.departAt.value;
+      const returnAt = form.returnAt.value;
+
+      if (!/^\d{4}$/.test(studentId)) {
+        return '학번은 4자리 숫자로 입력하세요.';
       }
 
-      const depart = new Date(fd.get('departAt'));
-      const ret = new Date(fd.get('returnAt'));
+      if (!studentName) {
+        return '이름을 입력하세요.';
+      }
+
+      const emailRe = /^26\d{5}@sjgl\.sjeduhs\.kr$/i;
+      if (!emailRe.test(studentEmail)) {
+        return '학교 도메인 이메일 형식만 입력 가능합니다. 예: 2612345@sjgl.sjeduhs.kr';
+      }
+
+      if (!type) {
+        return '외출/외박 유형을 선택하세요.';
+      }
+
+      if (reason.length < 2) {
+        return '사유를 2자 이상 입력하세요.';
+      }
+
+      if (!departAt) {
+        return '출발 시간을 입력하세요.';
+      }
+
+      if (!returnAt) {
+        return '복귀 시간을 입력하세요.';
+      }
+
+      const depart = new Date(departAt);
+      const ret = new Date(returnAt);
+
+      if (Number.isNaN(depart.getTime()) || Number.isNaN(ret.getTime())) {
+        return '출발/복귀 시간 형식이 올바르지 않습니다.';
+      }
 
       if (ret < depart) {
-        ev.preventDefault();
-        alert('복귀 시간이 출발 시간보다 빠를 수 없습니다.');
+        return '복귀 시간이 출발 시간보다 빠를 수 없습니다.';
+      }
+
+      return '';
+    }
+
+    function extractErrorMessageFromHtml(htmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+
+      const title = (doc.querySelector('title')?.textContent || '').trim();
+      const bodyText = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+
+      if (title.includes('오류')) {
+        const match = bodyText.match(/오류:\s*(.*)$/);
+        if (match && match[1]) return match[1].trim();
+        return bodyText || '제출 중 오류가 발생했습니다.';
+      }
+
+      return '';
+    }
+
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      clearMessage();
+
+      const validationError = validateForm();
+      if (validationError) {
+        showMessage('error', '입력 확인', validationError);
         return;
       }
 
       submitBtn.disabled = true;
       submitBtn.textContent = '제출 중...';
+      showMessage('info', '처리 중', '신청 내용을 전송하고 있습니다.');
+
+      try {
+        const formData = new FormData(form);
+        const body = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+          body.append(key, value);
+        }
+
+        const res = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          },
+          body: body.toString()
+        });
+
+        const htmlText = await res.text();
+        const errorMessage = extractErrorMessageFromHtml(htmlText);
+
+        if (errorMessage) {
+          showMessage('error', '제출 실패', errorMessage);
+          submitBtn.disabled = false;
+          submitBtn.textContent = '제출';
+          return;
+        }
+
+        document.open();
+        document.write(htmlText);
+        document.close();
+
+      } catch (err) {
+        showMessage(
+          'error',
+          '제출 실패',
+          err && err.message ? err.message : '네트워크 오류가 발생했습니다. 잠시 후 다시 시도하세요.'
+        );
+        submitBtn.disabled = false;
+        submitBtn.textContent = '제출';
+      }
     });
   </script>
 </body>
