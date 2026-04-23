@@ -87,12 +87,6 @@
       border: 1px solid #f0c2c2;
       color: #8a1c1c;
     }
-    .msg-box.info {
-      display: block;
-      background: #f5f9ff;
-      border: 1px solid #cfe0ff;
-      color: #174ea6;
-    }
     .msg-title {
       font-weight: 700;
       margin-bottom: 6px;
@@ -103,7 +97,12 @@
   <h2>외출·외박 확인증 제출</h2>
 
   <div class="card">
-    <form id="requestForm" novalidate>
+    <form
+      id="requestForm"
+      method="POST"
+      action="https://script.google.com/macros/s/AKfycbxYdy-dNnaEMTit0eeYMKmqwp6OpkKHzRzVsO9yHetsJAtFa72aiF1YytOBFI9YP2Y/exec"
+      novalidate
+    >
       <input type="hidden" id="submissionKey" name="submissionKey" />
 
       <div class="row">
@@ -151,8 +150,8 @@
 
       <button id="submitBtn" class="btn" type="submit">제출</button>
       <div class="hint">
-        제출 후 완료 안내문이 바로 표시됩니다.<br>
-        같은 신청을 반복 클릭하면 한 번만 처리됩니다.
+        제출 후 결과 페이지로 이동합니다.<br>
+        같은 신청을 반복 클릭하면 서버에서 한 번만 처리되도록 설정되어 있습니다.
       </div>
 
       <div id="messageBox" class="msg-box"></div>
@@ -160,8 +159,6 @@
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxYdy-dNnaEMTit0eeYMKmqwp6OpkKHzRzVsO9yHetsJAtFa72aiF1YytOBFI9YP2Y/exec';
-
     const form = document.getElementById('requestForm');
     const submitBtn = document.getElementById('submitBtn');
     const messageBox = document.getElementById('messageBox');
@@ -178,15 +175,9 @@
       }
     }
 
-    function showMessage(type, title, text) {
-      messageBox.className = `msg-box ${type}`;
+    function showError(title, text) {
+      messageBox.className = 'msg-box error';
       messageBox.innerHTML = `<div class="msg-title">${escapeHtml(title)}</div><div>${escapeHtml(text)}</div>`;
-    }
-
-    function clearMessage() {
-      messageBox.className = 'msg-box';
-      messageBox.innerHTML = '';
-      messageBox.style.display = '';
     }
 
     function escapeHtml(text) {
@@ -253,86 +244,22 @@
       return '';
     }
 
-    function extractErrorMessageFromHtml(htmlText) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlText, 'text/html');
-
-      const title = (doc.querySelector('title')?.textContent || '').trim();
-      const bodyText = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
-
-      if (title.includes('오류')) {
-        const match = bodyText.match(/오류:\s*(.*)$/);
-        if (match && match[1]) return match[1].trim();
-        return bodyText || '제출 중 오류가 발생했습니다.';
-      }
-
-      return '';
-    }
-
-    form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-
+    form.addEventListener('submit', (ev) => {
       if (isSubmitting) {
-        showMessage('info', '처리 중', '이미 제출 중입니다. 잠시만 기다리세요.');
+        ev.preventDefault();
         return;
       }
 
-      clearMessage();
-
       const validationError = validateForm();
       if (validationError) {
-        showMessage('error', '입력 확인', validationError);
+        ev.preventDefault();
+        showError('입력 확인', validationError);
         return;
       }
 
       isSubmitting = true;
       submitBtn.disabled = true;
       submitBtn.textContent = '제출 중...';
-      showMessage('info', '처리 중', '신청 내용을 전송하고 있습니다.');
-
-      try {
-        const formData = new FormData(form);
-        const body = new URLSearchParams();
-
-        for (const [key, value] of formData.entries()) {
-          body.append(key, value);
-        }
-
-        const res = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-          },
-          body: body.toString()
-        });
-
-        const htmlText = await res.text();
-        const errorMessage = extractErrorMessageFromHtml(htmlText);
-
-        if (errorMessage) {
-          showMessage('error', '제출 실패', errorMessage);
-          isSubmitting = false;
-          submitBtn.disabled = false;
-          submitBtn.textContent = '제출';
-          issueSubmissionKey();
-          return;
-        }
-
-        document.open();
-        document.write(htmlText);
-        document.close();
-
-      } catch (err) {
-        showMessage(
-          'error',
-          '제출 실패',
-          err && err.message ? err.message : '네트워크 오류가 발생했습니다. 잠시 후 다시 시도하세요.'
-        );
-        isSubmitting = false;
-        submitBtn.disabled = false;
-        submitBtn.textContent = '제출';
-        issueSubmissionKey();
-      }
     });
 
     issueSubmissionKey();
