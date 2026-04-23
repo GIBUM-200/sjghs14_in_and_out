@@ -100,7 +100,7 @@
     <form
       id="requestForm"
       method="POST"
-      action="https://script.google.com/macros/s/AKfycbx0t-WGbdHa3Puixq8nUH0MvLGzawio53a8p70NvF7Xl7j9o2KQwvsdttx7kw8lZJML/exec"
+      action="https://script.google.com/macros/s/AKfycbzLJuUZNAAPqvakic0bqRhVfTGERrnEoWzPEv4CoiXuQNAdsufUjkawxqSvjVcVjUd8/exec"
       novalidate
     >
       <input type="hidden" id="submissionKey" name="submissionKey" />
@@ -150,6 +150,7 @@
 
       <button id="submitBtn" class="btn" type="submit">제출</button>
       <div class="hint">
+        [CHECK-0423] 테스트용 페이지입니다.<br>
         제출 후 결과 페이지로 이동합니다.<br>
         같은 신청을 반복 클릭하면 서버에서 한 번만 처리되도록 설정되어 있습니다.
       </div>
@@ -253,13 +254,13 @@
       const validationError = validateForm();
       if (validationError) {
         ev.preventDefault();
-        showError('입력 확인', validationError);
+        showError('[CHECK-0423] 입력 확인', validationError);
         return;
       }
 
       isSubmitting = true;
       submitBtn.disabled = true;
-      submitBtn.textContent = '제출 중...';
+      submitBtn.textContent = '[CHECK-0423] 제출 중...';
     });
 
     issueSubmissionKey();
