@@ -104,6 +104,8 @@
 
   <div class="card">
     <form id="requestForm" novalidate>
+      <input type="hidden" id="submissionKey" name="submissionKey" />
+
       <div class="row">
         <div>
           <label for="studentId">학번</label>
@@ -150,7 +152,7 @@
       <button id="submitBtn" class="btn" type="submit">제출</button>
       <div class="hint">
         제출 후 완료 안내문이 바로 표시됩니다.<br>
-        이미 제출되었거나 승인된 신청과 시간이 겹치면 제출되지 않습니다.
+        같은 신청을 반복 클릭하면 한 번만 처리됩니다.
       </div>
 
       <div id="messageBox" class="msg-box"></div>
@@ -163,10 +165,22 @@
     const form = document.getElementById('requestForm');
     const submitBtn = document.getElementById('submitBtn');
     const messageBox = document.getElementById('messageBox');
+    const submissionKeyInput = document.getElementById('submissionKey');
+
+    let isSubmitting = false;
+
+    function issueSubmissionKey() {
+      if (window.crypto && crypto.randomUUID) {
+        submissionKeyInput.value = crypto.randomUUID();
+      } else {
+        submissionKeyInput.value =
+          'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      }
+    }
 
     function showMessage(type, title, text) {
       messageBox.className = `msg-box ${type}`;
-      messageBox.innerHTML = `<div class="msg-title">${title}</div><div>${escapeHtml(text)}</div>`;
+      messageBox.innerHTML = `<div class="msg-title">${escapeHtml(title)}</div><div>${escapeHtml(text)}</div>`;
     }
 
     function clearMessage() {
@@ -200,7 +214,6 @@
       if (!/^\d{4}$/.test(studentId)) {
         return '학번은 4자리 숫자로 입력하세요.';
       }
-
       if (!studentName) {
         return '이름을 입력하세요.';
       }
@@ -258,6 +271,12 @@
 
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
+
+      if (isSubmitting) {
+        showMessage('info', '처리 중', '이미 제출 중입니다. 잠시만 기다리세요.');
+        return;
+      }
+
       clearMessage();
 
       const validationError = validateForm();
@@ -266,6 +285,7 @@
         return;
       }
 
+      isSubmitting = true;
       submitBtn.disabled = true;
       submitBtn.textContent = '제출 중...';
       showMessage('info', '처리 중', '신청 내용을 전송하고 있습니다.');
@@ -291,8 +311,10 @@
 
         if (errorMessage) {
           showMessage('error', '제출 실패', errorMessage);
+          isSubmitting = false;
           submitBtn.disabled = false;
           submitBtn.textContent = '제출';
+          issueSubmissionKey();
           return;
         }
 
@@ -306,10 +328,14 @@
           '제출 실패',
           err && err.message ? err.message : '네트워크 오류가 발생했습니다. 잠시 후 다시 시도하세요.'
         );
+        isSubmitting = false;
         submitBtn.disabled = false;
         submitBtn.textContent = '제출';
+        issueSubmissionKey();
       }
     });
+
+    issueSubmissionKey();
   </script>
 </body>
 </html>
